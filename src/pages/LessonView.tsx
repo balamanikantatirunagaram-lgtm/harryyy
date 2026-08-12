@@ -150,7 +150,24 @@ const LessonView: React.FC = () => {
 
         <div className="bg-midnight-dark text-parchment-light p-4 rounded border border-gold-dark/50 mb-8 shadow-inner">
           <h4 className="font-bold text-gold mb-2 uppercase tracking-widest text-xs">Current Quest</h4>
-          <p className="text-sm">{lessonData.questDescription}</p>
+          <p className="text-sm mb-3">{lessonData.questDescription}</p>
+          
+          {(lessonData.exampleInput || lessonData.exampleOutput) && (
+            <div className="bg-black/50 p-3 rounded text-xs font-mono space-y-2 mt-4 border border-parchment/10">
+              {lessonData.exampleInput && lessonData.exampleInput !== "None" && (
+                <div>
+                  <span className="text-gold-dark">Input: </span>
+                  <span className="text-parchment/70">{lessonData.exampleInput}</span>
+                </div>
+              )}
+              {lessonData.exampleOutput && (
+                <div>
+                  <span className="text-gold-dark">Expected Output: </span>
+                  <span className="text-emerald-400">{lessonData.exampleOutput}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
