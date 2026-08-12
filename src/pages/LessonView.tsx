@@ -20,7 +20,7 @@ const LessonView: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { level, currentChapter, currentLesson, previousTopics, prefetchedLesson, addXP, completeLesson } = usePlayerStore();
+  const { level, currentChapter, currentLesson, previousTopics, addXP, completeLesson, savedCode, saveLessonCode } = usePlayerStore();
 
   const targetLessonNumber = id ? parseInt(id, 10) : currentLesson;
 
@@ -34,15 +34,14 @@ const LessonView: React.FC = () => {
       setError(null);
       setIsSuccess(false);
 
-      if (prefetchedLesson && prefetchedLesson.title && previousTopics[previousTopics.length - 1] !== prefetchedLesson.title) {
-        // Wait, prefetch condition is tricky. It's better to just fetch directly since we use CURRICULUM now.
-      }
-
       setIsGenerating(true);
       try {
         const data = await generateLesson(level, currentChapter, previousTopics, targetLessonNumber);
         setLessonData(data);
-        setCode(data.starterCode || '# Write your incantation here\n');
+        
+        // Restore user's saved code if they are replaying, otherwise use starter code
+        const initialCode = savedCode[targetLessonNumber] || data.starterCode || '# Write your incantation here\n';
+        setCode(initialCode);
       } catch (err) {
         console.error(err);
       } finally {
@@ -60,6 +59,9 @@ const LessonView: React.FC = () => {
     setError(null);
     setIsSuccess(false);
 
+    // Save their code every time they cast a spell!
+    saveLessonCode(targetLessonNumber, code);
+
     const result = await runPythonCode(code);
     setOutput(result.output);
     setError(result.error);
@@ -67,7 +69,7 @@ const LessonView: React.FC = () => {
 
     if (!result.error && result.output.includes(lessonData.expectedOutputSnippet)) {
       setIsSuccess(true);
-      // Only give XP if they are beating it for the first time (prevent infinite grinding)
+      // Only give XP if they are beating it for the first time
       if (targetLessonNumber === currentLesson) {
         addXP(lessonData.xpReward);
       }
@@ -79,7 +81,7 @@ const LessonView: React.FC = () => {
       completeLesson(lessonData.title, targetLessonNumber);
       setIsSuccess(false);
       setOutput('');
-      setCode('');
+      // Do not clear code here, let the next lesson fetch it
       navigate(`/lesson/${targetLessonNumber + 1}`);
     }
   };

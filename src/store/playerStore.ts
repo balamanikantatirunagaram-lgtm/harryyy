@@ -15,10 +15,12 @@ interface PlayerState {
   unlockedSpells: string[];
   previousTopics: string[];
   prefetchedLesson: GeneratedLesson | null;
+  savedCode: Record<number, string>;
   setName: (name: string) => void;
   setHouse: (house: House) => void;
   addXP: (amount: number) => void;
   completeLesson: (topic: string, playedLessonNumber: number) => void;
+  saveLessonCode: (lessonNumber: number, code: string) => void;
   setPrefetchedLesson: (lesson: GeneratedLesson | null) => void;
   loadProfile: (username: string, data: any) => void;
   clearProfile: () => void;
@@ -45,6 +47,7 @@ export const usePlayerStore = create<PlayerState>()(
       unlockedSpells: [],
       previousTopics: [],
       prefetchedLesson: null,
+      savedCode: {},
       
       loadProfile: (username, data) => set({
         name: username,
@@ -53,11 +56,12 @@ export const usePlayerStore = create<PlayerState>()(
         currentChapter: data.current_chapter || 1,
         currentLesson: data.current_lesson || 1,
         previousTopics: data.previous_topics || [],
+        savedCode: data.saved_code || {},
         prefetchedLesson: null
       }),
 
       clearProfile: () => set({
-        name: '', level: 1, xp: 0, currentChapter: 1, currentLesson: 1, previousTopics: [], prefetchedLesson: null
+        name: '', level: 1, xp: 0, currentChapter: 1, currentLesson: 1, previousTopics: [], prefetchedLesson: null, savedCode: {}
       }),
 
       setName: (name) => set({ name }),
@@ -93,6 +97,13 @@ export const usePlayerStore = create<PlayerState>()(
           current_chapter: nextChapter,
           previous_topics: newTopics
         });
+      },
+
+      saveLessonCode: (lessonNumber, code) => {
+        const state = get();
+        const newSavedCode = { ...state.savedCode, [lessonNumber]: code };
+        set({ savedCode: newSavedCode });
+        syncToCloud(state.name, { saved_code: newSavedCode });
       },
       
       setPrefetchedLesson: (lesson) => set({ prefetchedLesson: lesson })
