@@ -14,14 +14,23 @@ const AcademyMap: React.FC = () => {
     ...val
   })).sort((a, b) => a.id - b.id);
 
-  const ySpacing = 220;
-  const startY = 300;
+  // Tighter vertical spacing to fit more on screen
+  const ySpacing = 140; 
+  const startY = 280;
   
+  // Pattern using VW (Viewport Width) to span the entire screen horizontally
+  // -40 is far left, 0 is center, 40 is far right
   const pattern = [
-    0, 250, 100, 300, -100, -250, -100, -300, 
-    50, 250, 400, 200, -50, -300, -400, -150, 
-    100, 300, 150, 350, -100, -250, -350, -200,
-    150, 350, 400, 100, -200, -350
+    // Chapter 1 (1-6): Snaking from far left to right
+    -35, -15, 5, 25, 40, 20,
+    // Chapter 2 (7-12): Right to far left
+    0, -25, -40, -20, -5, 15,
+    // Chapter 3 (13-18): Left/Center to right
+    35, 40, 20, -5, -25, -40,
+    // Chapter 4 (19-24): Far left to right
+    -30, -10, 15, 35, 25, 5,
+    // Chapter 5 (25-30): Center zig-zag to final boss
+    -15, -35, -20, 0, 25, 0
   ];
 
   const nodePositions = lessons.map((lesson, index) => ({
@@ -35,20 +44,25 @@ const AcademyMap: React.FC = () => {
 
   const totalHeight = startY + lessons.length * ySpacing + 200;
 
+  // Generate curved SVG path
   const generatePath = () => {
     return nodePositions.map((p, i) => {
-      const x = `calc(50% + ${p.xOffset}px)`;
+      const x = `calc(50% + ${p.xOffset}vw)`;
       if (i === 0) return `M ${x} ${p.y}`;
       const prev = nodePositions[i-1];
-      const prevX = `calc(50% + ${prev.xOffset}px)`;
+      const prevX = `calc(50% + ${prev.xOffset}vw)`;
+      // Smooth vertical S-curve
       const cpY = prev.y + (p.y - prev.y) / 2;
       return `C ${prevX} ${cpY}, ${x} ${cpY}, ${x} ${p.y}`;
     }).join(' ');
   };
 
   return (
-    <div className="min-h-full relative overflow-y-auto overflow-x-hidden font-fantasy bg-[#0a0a0c]">
+    <div 
+      className="min-h-full relative overflow-y-auto overflow-x-hidden font-fantasy bg-[#0a0a0c]" 
+    >
       
+      {/* Background vignette and subtle noise */}
       <div 
         className="fixed inset-0 pointer-events-none z-0" 
         style={{ 
@@ -57,24 +71,26 @@ const AcademyMap: React.FC = () => {
         }} 
       />
 
-      <div className="absolute top-16 left-1/2 -translate-x-1/2 text-center z-20 w-full max-w-5xl">
-        <h3 className="text-xl text-[#D4AF37] tracking-[0.3em] uppercase mb-2">Year 1</h3>
-        <h2 className="text-5xl font-bold tracking-widest text-[#F3E5AB] drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
+      {/* Header */}
+      <div className="absolute top-12 left-1/2 -translate-x-1/2 text-center z-20 w-full max-w-5xl">
+        <h3 className="text-lg text-[#D4AF37] tracking-[0.3em] uppercase mb-1">Year 1</h3>
+        <h2 className="text-4xl md:text-5xl font-bold tracking-widest text-[#F3E5AB] drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
           The Coder's Journey
         </h2>
         <div className="mt-4 flex items-center justify-center space-x-4">
-          <div className="h-[1px] w-24 bg-gradient-to-r from-transparent to-[#D4AF37]/50" />
-          <Star className="w-4 h-4 text-[#D4AF37]/80" />
-          <div className="h-[1px] w-24 bg-gradient-to-l from-transparent to-[#D4AF37]/50" />
+          <div className="h-[1px] w-32 bg-gradient-to-r from-transparent to-[#D4AF37]/50" />
+          <Star className="w-5 h-5 text-[#D4AF37]/80" />
+          <div className="h-[1px] w-32 bg-gradient-to-l from-transparent to-[#D4AF37]/50" />
         </div>
       </div>
 
       <div className="relative w-full z-10" style={{ height: totalHeight }}>
         
+        {/* SVG Path connecting all nodes */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ top: 0, left: 0 }}>
           <defs>
             <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="6" result="blur" />
+              <feGaussianBlur stdDeviation="5" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
@@ -90,66 +106,81 @@ const AcademyMap: React.FC = () => {
           />
         </svg>
 
-        {nodePositions.map((node, index) => (
-          <motion.div
-            key={node.id}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
-            className="absolute group z-20 flex flex-col items-center justify-center"
-            style={{ 
-              top: node.y, 
-              left: `calc(50% + ${node.xOffset}px)`,
-              transform: 'translate(-50%, -50%)' 
-            }}
-          >
-            <div className={`absolute w-64 h-64 rounded-full pointer-events-none transition-opacity duration-700 ${node.isActive ? 'bg-[#D4AF37]/10 blur-3xl opacity-100' : 'bg-[#D4AF37]/5 blur-2xl opacity-40 group-hover:opacity-100'}`} />
+        {nodePositions.map((node, index) => {
+          const isFirstInChapter = node.id % 6 === 1;
 
-            <div className="mb-4 text-center pointer-events-none w-64 z-10">
-              <div className={`text-sm font-bold uppercase tracking-[0.2em] mb-1 ${node.isLocked ? 'text-gray-500' : 'text-[#D4AF37]'}`}>
-                Chapter {node.chapterNumber}
-              </div>
-              <div className={`text-lg font-sans ${node.isLocked ? 'text-gray-600' : 'text-gray-200 drop-shadow-md'}`}>
-                {node.title}
-              </div>
-            </div>
-
-            <div 
-              onClick={() => !node.isLocked && navigate(`/lesson/${node.id}`)}
-              className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 z-10 p-1 ${
-                node.isLocked 
-                  ? 'border border-gray-700/50 cursor-not-allowed opacity-60 bg-[#111]' 
-                  : node.isActive
-                    ? 'border border-[#D4AF37] cursor-pointer scale-110 shadow-[0_0_30px_rgba(212,175,55,0.4)] bg-[#1a1505]'
-                    : 'border border-[#D4AF37]/50 cursor-pointer hover:scale-110 bg-[#111] hover:border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.1)]'
-              }`}
+          return (
+            <motion.div
+              key={node.id}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
+              className="absolute group z-20 flex flex-col items-center justify-center"
+              style={{ 
+                top: node.y, 
+                left: `calc(50% + ${node.xOffset}vw)`,
+                transform: 'translate(-50%, -50%)' 
+              }}
             >
-              <div className={`w-full h-full rounded-full border flex items-center justify-center flex-col ${
-                node.isLocked ? 'border-gray-800' : 'border-[#D4AF37]/80'
-              }`}>
-                {node.isLocked ? (
-                  <Lock className="w-6 h-6 text-gray-700" />
-                ) : (
-                  <span className={`text-3xl ${node.isActive ? 'text-[#F3E5AB] drop-shadow-[0_0_8px_rgba(243,229,171,0.8)]' : 'text-[#D4AF37]'}`}>
-                    {node.id}
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            <div className="mt-3 pointer-events-none z-10">
-              {node.isLocked ? (
-                  <div className="w-1 h-1 rounded-full bg-gray-700" />
-              ) : node.isBoss ? (
-                  <Trophy className="w-5 h-5 text-[#D4AF37] drop-shadow-[0_0_5px_rgba(212,175,55,0.5)]" />
-              ) : node.isCompleted ? (
-                  <Shield className="w-5 h-5 text-emerald-500/80" />
-              ) : (
-                  <BookOpen className="w-5 h-5 text-[#D4AF37]/70" />
+              {/* Regional Island Glow */}
+              <div className={`absolute w-72 h-72 rounded-full pointer-events-none transition-opacity duration-700 ${node.isActive ? 'bg-[#D4AF37]/15 blur-3xl opacity-100' : 'bg-[#D4AF37]/5 blur-2xl opacity-50 group-hover:opacity-100'}`} />
+
+              {/* Chapter Header (Only on first lesson of the chapter) */}
+              {isFirstInChapter && (
+                <div className="absolute -top-24 w-64 text-center pointer-events-none z-10">
+                  <div className="text-sm font-bold uppercase tracking-[0.3em] text-[#D4AF37] mb-1">
+                    Chapter {node.chapterNumber}
+                  </div>
+                  <div className="w-16 h-[1px] bg-[#D4AF37]/40 mx-auto" />
+                </div>
               )}
-            </div>
-          </motion.div>
-        ))}
+
+              {/* Lesson Node */}
+              <div 
+                onClick={() => !node.isLocked && navigate(`/lesson/${node.id}`)}
+                className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 z-10 p-1 ${
+                  node.isLocked 
+                    ? 'border border-gray-700/50 cursor-not-allowed opacity-60 bg-[#111]' 
+                    : node.isActive
+                      ? 'border border-[#D4AF37] cursor-pointer scale-110 shadow-[0_0_30px_rgba(212,175,55,0.4)] bg-[#1a1505]'
+                      : 'border border-[#D4AF37]/50 cursor-pointer hover:scale-110 bg-[#111] hover:border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.1)]'
+                }`}
+              >
+                {/* Inner Ring */}
+                <div className={`w-full h-full rounded-full border flex items-center justify-center flex-col ${
+                  node.isLocked ? 'border-gray-800' : 'border-[#D4AF37]/80'
+                }`}>
+                  {node.isLocked ? (
+                    <Lock className="w-6 h-6 text-gray-700" />
+                  ) : (
+                    <span className={`text-3xl ${node.isActive ? 'text-[#F3E5AB] drop-shadow-[0_0_8px_rgba(243,229,171,0.8)]' : 'text-[#D4AF37]'}`}>
+                      {node.id}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Title and Icon Below */}
+              <div className="mt-3 text-center pointer-events-none z-10 w-48">
+                <div className={`text-sm md:text-base font-sans mb-1 leading-tight ${node.isLocked ? 'text-gray-600' : 'text-gray-200 drop-shadow-md'}`}>
+                  {node.title}
+                </div>
+                <div className="flex justify-center">
+                  {node.isLocked ? (
+                     <div className="w-1 h-1 rounded-full bg-gray-700" />
+                  ) : node.isBoss ? (
+                     <Trophy className="w-4 h-4 text-[#D4AF37] drop-shadow-[0_0_5px_rgba(212,175,55,0.5)]" />
+                  ) : node.isCompleted ? (
+                     <Shield className="w-4 h-4 text-emerald-500/80" />
+                  ) : (
+                     <BookOpen className="w-4 h-4 text-[#D4AF37]/70" />
+                  )}
+                </div>
+              </div>
+
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
