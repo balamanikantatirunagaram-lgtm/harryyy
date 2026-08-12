@@ -1,44 +1,64 @@
 # Codebase Audit Report
 
-## 1. Bugs & Errors
+After scanning the codebase, I've identified several bugs, security vulnerabilities, and logic issues.
 
-### 1.1. Chapter Progression Math Bug (`playerStore.ts`)
-**Issue:** The formula for advancing the player's chapter upon completing a lesson is incorrect:
-```typescript
-currentChapter: Math.floor(state.currentLesson / 6) + 1
+## 1. Security Vulnerabilities
+
+### 1.1 Insecure Row Level Security (RLS) (`supabase_schema.sql`)
+**Issue:** The RLS policy for updating user profiles is completely open:
+```sql
+CREATE POLICY "Allow update to game_users" ON public.game_users FOR UPDATE USING (true) WITH CHECK (true);
 ```
-When a user completes Lesson 5, `currentLesson` becomes 6. The formula calculates `Math.floor(6 / 6) + 1 = 2`, meaning the player is prematurely moved to Chapter 2 before they even fight the Chapter 1 Boss (Lesson 6).
-**Fix:** The logic should be adjusted to:
-```typescript
-currentChapter: Math.floor((state.currentLesson) / 6) + 1
-```
-Wait, if `currentLesson` is the *next* lesson they are about to play, when they finish 5, it becomes 6. We want 6 to still be Chapter 1.
-So: `Math.floor((state.currentLesson - 1) / 6) + 1`.
-When next is 6: `(6 - 1) / 6 = 0 + 1 = 1`.
-When next is 7: `(7 - 1) / 6 = 1 + 1 = 2`.
+**Impact:** Any user can update any other player's profile data (level, XP, house points, saved code) just by knowing their username.
+**Fix:** Restrict updates so users can only modify their own data. If Supabase Auth isn't being used, this requires a custom mechanism, but leaving it `true` for production is highly dangerous.
 
-### 1.2. Stale Closure / Missing React Hook Dependencies (`LessonView.tsx`)
-**Issue:** The `eslint` linter correctly identifies that the `useEffect` responsible for prefetching lessons is missing `prefetchedLesson` and `setPrefetchedLesson` from its dependency array. Because `useEffect` captures variables via closures, it can sometimes access a stale version of `prefetchedLesson`.
-**Fix:** Refactor the prefetching logic to use a `useRef` to track active prefetches to prevent infinite loops when adding it to the dependency array.
-
-### 1.3. Unused Error Variable (`pythonRunner.ts`)
-**Issue:** The Pyodide try/catch block silently catches an error when attempting to fetch `sys.stdout` after a crash. `catch(e) {}` leaves `e` unused, which triggers linting warnings.
-**Fix:** Replace `catch(e)` with `catch(_)` or explicitly handle the logging fallback.
+### 1.2 Plain-text Passwords (`src/store/authStore.ts` & `supabase_schema.sql`)
+**Issue:** The application saves user passwords in plain text directly to the `password_hash` column.
+**Impact:** Anyone with database read access can see all user passwords.
+**Fix:** Implement password hashing on the client/server before storing, or switch to Supabase's native authentication system (`supabase.auth`).
 
 ---
 
-## 2. Architecture Improvements
+## 2. Logic Bugs & Errors
 
-### 2.1. Centralized Database (Supabase)
-Currently, the application relies entirely on Zustand's `persist` middleware, which saves all player progression (XP, levels, unlocked spells, and completed lessons) strictly to the browser's `localStorage`.
-**Why this is an issue:** If a user logs out and logs in on their phone, they will have 0 XP and be back at Lesson 1.
-**Recommendation:** 
-Since `SUPABASE_URL` is already in the `.env` file, we should integrate the `@supabase/supabase-js` client. We can build a `syncWithCloud()` function in the `playerStore` that automatically pushes the Zustand state to a PostgreSQL `profiles` table every time a lesson is completed.
+### 2.1 Unhandled Supabase API Errors (`src/store/authStore.ts` & `src/store/playerStore.ts`)
+**Issue:** The Supabase JavaScript client does not throw exceptions when database operations fail (e.g., constraints violated, RLS blocked). It returns `{ data, error }`. The current `try/catch` blocks only catch network errors.
+**Impact:** The application silently ignores database failures. The `catch (e)` blocks also trigger ESLint warnings because the error variable is never used.
+**Fix:** Explicitly check the `error` object inside the `try` block:
+```typescript
+const { error, data } = await supabase.from('...').insert(...);
+if (error) {
+  console.error(error.message);
+  return false;
+}
+```
 
-### 2.2. Robust AI JSON Parsing
-Currently, we assume the AI will always return perfectly formatted JSON because of the `response_format` flag. However, network blips or edge cases can result in truncated responses.
-**Recommendation:** Implement `zod` for strict runtime schema validation before updating the UI, so the app gracefully retries the API instead of crashing.
+### 2.2 Naive Quest Verification (`src/pages/LessonView.tsx`)
+**Issue:** The lesson completion check relies purely on matching a substring in the terminal output:
+```typescript
+if (!result.error && result.output.includes(lessonData.expectedOutputSnippet))
+```
+**Impact:** A player can easily cheat or bypass the intended logic of a quest (like writing a `for` loop) by simply printing the expected output directly (e.g., `print("Found it!")`).
+**Fix:** Validate the structure of the student's code using Abstract Syntax Tree (AST) parsing, or execute specific assertions in Python alongside their code.
 
-### 2.3. Dynamic Curriculum Mapping
-Right now, `DYNAMIC_PLAN` in `aiTutor.ts` maps directly via an array index. If the AI hallucinates or the user needs extra help, the array index logic breaks down.
-**Recommendation:** Switch to a graph-based progression model or prompt the AI with the user's *actual code history* to generate hyper-personalized remediation lessons rather than moving strictly forward on a rail.
+### 2.3 Stale React Hook Dependencies (`src/pages/LessonView.tsx`)
+**Issue:** ESLint reports that `savedCode` is missing from the dependency array of the `useEffect` that fetches lessons (Line 53).
+**Impact:** This can lead to stale closures where React uses an outdated version of `savedCode` when fetching the initial code.
+**Fix:** Include `savedCode` in the dependency array, or use a `useRef` to store the latest value without triggering re-renders.
+
+---
+
+## 3. Architecture & Performance Issues
+
+### 3.1 Abandoned AI Integration (`src/services/aiTutor.ts`)
+**Issue:** The `brain.ts` script runs asynchronously to generate lessons and push them to Supabase, but the frontend has hardcoded the curriculum locally (`src/data/curriculum.ts`). The `generateLesson` function bypasses the database entirely.
+**Impact:** Dead code and wasted API calls. The `brain.ts` script is essentially disconnected from the actual gameplay loop.
+
+### 3.2 Large Vite Build Chunks
+**Issue:** Running `npm run build` throws a warning: `Some chunks are larger than 500 kB after minification.`
+**Impact:** Initial page load times will be slow for users on slower connections because the entire application bundle is loaded at once.
+**Fix:** Configure Rollup to split chunks in `vite.config.ts`, and dynamically import large libraries like `@monaco-editor/react` or `pyodide`.
+
+### 3.3 Unused Imports (`scripts/brain.ts`)
+**Issue:** The `fs` module is imported but never used.
+**Fix:** Remove `import * as fs from 'fs';` to keep the code clean.

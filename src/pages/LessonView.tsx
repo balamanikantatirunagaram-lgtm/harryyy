@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import { runPythonCode, initPyodide } from '../services/pythonRunner';
 import { usePlayerStore } from '../store/playerStore';
 import { generateLesson, type GeneratedLesson } from '../services/aiTutor';
+import { explainMistake } from '../lib/ai';
 import { Play, RotateCcw, ShieldAlert, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -19,6 +20,11 @@ const LessonView: React.FC = () => {
   const [lessonData, setLessonData] = useState<GeneratedLesson | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  
+  // Hedwig state
+  const [hasFailed, setHasFailed] = useState(false);
+  const [hedwigHint, setHedwigHint] = useState<string | null>(null);
+  const [isAskingHedwig, setIsAskingHedwig] = useState(false);
 
   const { level, currentChapter, currentLesson, previousTopics, addXP, completeLesson, savedCode, saveLessonCode } = usePlayerStore();
 
@@ -33,6 +39,8 @@ const LessonView: React.FC = () => {
       setOutput('');
       setError(null);
       setIsSuccess(false);
+      setHasFailed(false);
+      setHedwigHint(null);
 
       setIsGenerating(true);
       try {
@@ -58,6 +66,8 @@ const LessonView: React.FC = () => {
     setOutput('');
     setError(null);
     setIsSuccess(false);
+    setHasFailed(false);
+    setHedwigHint(null);
 
     // Save their code every time they cast a spell!
     saveLessonCode(targetLessonNumber, code);
@@ -73,6 +83,23 @@ const LessonView: React.FC = () => {
       if (targetLessonNumber === currentLesson) {
         addXP(lessonData.xpReward);
       }
+    } else {
+      setHasFailed(true);
+    }
+  };
+
+  const handleAskHedwig = async () => {
+    if (!lessonData) return;
+    setIsAskingHedwig(true);
+    setHedwigHint(null);
+    try {
+      const combinedError = error || `Output did not match expected: "${lessonData.expectedOutputSnippet}"\nActual output:\n${output}`;
+      const hint = await explainMistake(code, combinedError, lessonData.questDescription);
+      setHedwigHint(hint);
+    } catch (e: any) {
+      setHedwigHint("Hoot... I am having trouble connecting to the magical network right now. Check your VITE_NVIDIA_API_KEY.");
+    } finally {
+      setIsAskingHedwig(false);
     }
   };
 
@@ -226,6 +253,37 @@ const LessonView: React.FC = () => {
             )}
           </div>
           
+          {hasFailed && !isSuccess && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 p-4 border border-red-900/50 rounded flex justify-between items-center bg-red-950/20"
+            >
+               <div className="text-red-400 text-sm">That spell didn't quite work. Need a hint?</div>
+               <button 
+                 onClick={handleAskHedwig}
+                 disabled={isAskingHedwig}
+                 className="px-4 py-2 bg-indigo-900 hover:bg-indigo-800 text-indigo-100 rounded text-sm font-bold flex items-center space-x-2 transition-colors border border-indigo-700"
+               >
+                 {isAskingHedwig ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>🦉 Ask Hedwig</span>}
+               </button>
+            </motion.div>
+          )}
+
+          {hedwigHint && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-4 p-4 bg-indigo-950/40 border border-indigo-800/50 rounded text-indigo-200 text-sm font-sans whitespace-pre-wrap flex items-start space-x-3"
+            >
+              <span className="text-3xl drop-shadow-md" role="img" aria-label="owl">🦉</span>
+              <div className="flex-1">
+                <strong className="text-indigo-300 font-bold block mb-1">Hedwig says:</strong>
+                {hedwigHint}
+              </div>
+            </motion.div>
+          )}
+
           {isSuccess && (
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}

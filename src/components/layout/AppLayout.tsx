@@ -3,13 +3,14 @@ import { Outlet, Link } from 'react-router-dom';
 import { usePlayerStore } from '../../store/playerStore';
 import { LogOut, Map, User, Scroll } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { HedwigChat } from '../HedwigChat';
 
 const AppLayout: React.FC = () => {
   const { name, level, xp } = usePlayerStore();
   const { logout } = useAuthStore();
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col">
+    <div className="h-screen w-screen overflow-hidden flex flex-col relative">
       {/* Header / Nav */}
       <header className="panel-dark flex items-center justify-between px-8 py-4 sticky top-0 z-50">
         <div className="flex items-center space-x-4">
@@ -41,6 +42,9 @@ const AppLayout: React.FC = () => {
       <main className="flex-1 relative overflow-y-auto">
         <Outlet />
       </main>
+
+      {/* Global AI Assistant */}
+      <HedwigChat />
     </div>
   );
 };
