@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-midnight text-parchment font-sans antialiased bg-midnight-texture;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-fantasy tracking-wider;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2 bg-gold-dark hover:bg-gold text-midnight font-bold rounded-sm border border-gold shadow-[0_0_10px_rgba(212,175,55,0.3)] hover:shadow-[0_0_15px_rgba(212,175,55,0.6)] transition-all duration-300 font-fantasy tracking-widest uppercase text-sm;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-2 bg-transparent hover:bg-midnight-light text-parchment font-bold rounded-sm border border-parchment/30 hover:border-parchment/70 transition-all duration-300 font-sans text-sm;
+  }
+
+  .panel-parchment {
+    @apply bg-parchment text-midnight-dark shadow-xl border border-gold-dark/30 bg-parchment-texture relative;
+  }
+  
+  .panel-dark {
+    @apply bg-midnight-dark/80 backdrop-blur-md text-parchment border border-parchment/10 shadow-2xl;
+  }
+
+  .magic-glow {
+    @apply shadow-[0_0_20px_rgba(96,165,250,0.5)];
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-midnight-dark;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-midnight-light rounded-full border border-parchment/10;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-parchment/20;
+}
