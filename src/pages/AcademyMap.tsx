@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Skull, Check, Sparkles, Feather } from 'lucide-react';
+import { Lock, BookOpen, Shield, Trophy, Star } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
 import { CURRICULUM } from '../data/curriculum';
 
@@ -14,15 +14,14 @@ const AcademyMap: React.FC = () => {
     ...val
   })).sort((a, b) => a.id - b.id);
 
-  const ySpacing = 160;
-  const startY = 320;
+  const ySpacing = 220;
+  const startY = 300;
   
-  // A sprawling pattern covering the whole screen
   const pattern = [
-    0, 220, 380, 200, -80, -280, -420, -220, 
-    100, 320, 450, 150, -120, -350, -450, -150, 
-    120, 340, 460, 180, -100, -320, -460, -200,
-    180, 380, 420, 120, -220, -380
+    0, 250, 100, 300, -100, -250, -100, -300, 
+    50, 250, 400, 200, -50, -300, -400, -150, 
+    100, 300, 150, 350, -100, -250, -350, -200,
+    150, 350, 400, 100, -200, -350
   ];
 
   const nodePositions = lessons.map((lesson, index) => ({
@@ -36,148 +35,121 @@ const AcademyMap: React.FC = () => {
 
   const totalHeight = startY + lessons.length * ySpacing + 200;
 
-  return (
-    <div 
-      className="min-h-full relative overflow-y-auto overflow-x-hidden font-fantasy" 
-      style={{ 
-        backgroundColor: '#E8D8B0', 
-        color: '#2C1810',
-        backgroundImage: `
-          radial-gradient(circle at center, transparent 0%, rgba(44,24,16,0.6) 120%),
-          url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")
-        `
-      }}
-    >
-      
-      {/* Dynamic Magical Floating Elements */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {[...Array(15)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-gold/20 blur-sm"
-            style={{
-              width: Math.random() * 6 + 2 + 'px',
-              height: Math.random() * 6 + 2 + 'px',
-              top: Math.random() * 100 + '%',
-              left: Math.random() * 100 + '%',
-            }}
-            animate={{
-              y: [0, -40, 0],
-              opacity: [0.1, 0.5, 0.1],
-            }}
-            transition={{
-              duration: Math.random() * 5 + 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        ))}
-      </div>
+  const generatePath = () => {
+    return nodePositions.map((p, i) => {
+      const x = `calc(50% + ${p.xOffset}px)`;
+      if (i === 0) return `M ${x} ${p.y}`;
+      const prev = nodePositions[i-1];
+      const prevX = `calc(50% + ${prev.xOffset}px)`;
+      const cpY = prev.y + (p.y - prev.y) / 2;
+      return `C ${prevX} ${cpY}, ${x} ${cpY}, ${x} ${p.y}`;
+    }).join(' ');
+  };
 
-      <div className="absolute top-20 left-1/2 -translate-x-1/2 text-center z-20 w-full max-w-5xl">
-        <div className="flex items-center justify-center space-x-6 mb-2">
-          <Feather className="w-10 h-10 opacity-70" style={{ color: '#4A0404' }} />
-          <h2 className="text-7xl font-bold tracking-widest drop-shadow-md" style={{ color: '#4A0404' }}>The Marauder's Path</h2>
-          <Feather className="w-10 h-10 opacity-70 transform -scale-x-100" style={{ color: '#4A0404' }} />
+  return (
+    <div className="min-h-full relative overflow-y-auto overflow-x-hidden font-fantasy bg-[#0a0a0c]">
+      
+      <div 
+        className="fixed inset-0 pointer-events-none z-0" 
+        style={{ 
+          boxShadow: 'inset 0 0 200px rgba(0, 0, 0, 0.9)',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")`
+        }} 
+      />
+
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 text-center z-20 w-full max-w-5xl">
+        <h3 className="text-xl text-[#D4AF37] tracking-[0.3em] uppercase mb-2">Year 1</h3>
+        <h2 className="text-5xl font-bold tracking-widest text-[#F3E5AB] drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
+          The Coder's Journey
+        </h2>
+        <div className="mt-4 flex items-center justify-center space-x-4">
+          <div className="h-[1px] w-24 bg-gradient-to-r from-transparent to-[#D4AF37]/50" />
+          <Star className="w-4 h-4 text-[#D4AF37]/80" />
+          <div className="h-[1px] w-24 bg-gradient-to-l from-transparent to-[#D4AF37]/50" />
         </div>
-        <p className="opacity-80 text-2xl font-sans italic tracking-wide">"I solemnly swear that I am up to no good."</p>
       </div>
 
       <div className="relative w-full z-10" style={{ height: totalHeight }}>
         
-        {/* SVG Path connecting all nodes */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ top: 0, left: 0, filter: 'drop-shadow(0px 2px 2px rgba(0,0,0,0.2))' }}>
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ top: 0, left: 0 }}>
+          <defs>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="6" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
           <path 
-            d={`M ${nodePositions.map(p => `calc(50% + ${p.xOffset}px) ${p.y}`).join(' L ')}`} 
+            d={generatePath()} 
             fill="none" 
-            stroke="#4A0404" 
-            strokeWidth="4"
+            stroke="#D4AF37" 
+            strokeWidth="3"
             strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="10 15" 
-            className="opacity-50"
+            strokeDasharray="8 12" 
+            className="opacity-70"
+            filter="url(#glow)"
           />
         </svg>
 
-        {nodePositions.map((node, index) => {
-          return (
-            <motion.div
-              key={node.id}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
-              className="absolute group z-20 flex flex-col items-center justify-center"
-              style={{ 
-                top: node.y, 
-                left: `calc(50% + ${node.xOffset}px)`,
-                transform: 'translate(-50%, -50%)' 
-              }}
+        {nodePositions.map((node, index) => (
+          <motion.div
+            key={node.id}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
+            className="absolute group z-20 flex flex-col items-center justify-center"
+            style={{ 
+              top: node.y, 
+              left: `calc(50% + ${node.xOffset}px)`,
+              transform: 'translate(-50%, -50%)' 
+            }}
+          >
+            <div className={`absolute w-64 h-64 rounded-full pointer-events-none transition-opacity duration-700 ${node.isActive ? 'bg-[#D4AF37]/10 blur-3xl opacity-100' : 'bg-[#D4AF37]/5 blur-2xl opacity-40 group-hover:opacity-100'}`} />
+
+            <div className="mb-4 text-center pointer-events-none w-64 z-10">
+              <div className={`text-sm font-bold uppercase tracking-[0.2em] mb-1 ${node.isLocked ? 'text-gray-500' : 'text-[#D4AF37]'}`}>
+                Chapter {node.chapterNumber}
+              </div>
+              <div className={`text-lg font-sans ${node.isLocked ? 'text-gray-600' : 'text-gray-200 drop-shadow-md'}`}>
+                {node.title}
+              </div>
+            </div>
+
+            <div 
+              onClick={() => !node.isLocked && navigate(`/lesson/${node.id}`)}
+              className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 z-10 p-1 ${
+                node.isLocked 
+                  ? 'border border-gray-700/50 cursor-not-allowed opacity-60 bg-[#111]' 
+                  : node.isActive
+                    ? 'border border-[#D4AF37] cursor-pointer scale-110 shadow-[0_0_30px_rgba(212,175,55,0.4)] bg-[#1a1505]'
+                    : 'border border-[#D4AF37]/50 cursor-pointer hover:scale-110 bg-[#111] hover:border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.1)]'
+              }`}
             >
-              {/* Lesson Node */}
-              <div 
-                onClick={() => !node.isLocked && navigate(`/lesson/${node.id}`)}
-                className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  node.isLocked 
-                    ? 'border-[3px] border-[#2C1810]/20 bg-[#E8D8B0] cursor-not-allowed opacity-70 hover:opacity-90' 
-                    : node.isActive
-                      ? 'border-4 border-gold bg-gradient-to-br from-red-700 to-red-900 cursor-pointer scale-125 shadow-[0_0_30px_rgba(220,38,38,0.5)] z-30'
-                      : 'border-2 border-[#3a0a0a] bg-[#6B1B1B] cursor-pointer shadow-[inset_0_-4px_8px_rgba(0,0,0,0.5),0_4px_10px_rgba(0,0,0,0.3)] hover:scale-110' // Wax seal look
-                }`}
-              >
-                {/* Wax seal inner ring for completed levels */}
-                {node.isCompleted && (
-                  <div className="absolute inset-2 rounded-full border border-[#9A2B2B] opacity-50" />
-                )}
-
+              <div className={`w-full h-full rounded-full border flex items-center justify-center flex-col ${
+                node.isLocked ? 'border-gray-800' : 'border-[#D4AF37]/80'
+              }`}>
                 {node.isLocked ? (
-                  <div className="w-3 h-3 rounded-full bg-[#2C1810]/20" />
-                ) : node.isActive ? (
-                  node.isBoss ? <Skull className="w-10 h-10 text-gold animate-pulse drop-shadow-md" /> : <Sparkles className="w-10 h-10 text-gold animate-pulse drop-shadow-md" />
+                  <Lock className="w-6 h-6 text-gray-700" />
                 ) : (
-                  node.isBoss ? <Skull className="w-8 h-8 text-gold drop-shadow-md" /> : <Check className="w-10 h-10 text-gold drop-shadow-md" />
+                  <span className={`text-3xl ${node.isActive ? 'text-[#F3E5AB] drop-shadow-[0_0_8px_rgba(243,229,171,0.8)]' : 'text-[#D4AF37]'}`}>
+                    {node.id}
+                  </span>
                 )}
               </div>
-
-              {/* Enhanced Tooltip */}
-              <div 
-                className={`absolute top-1/2 -translate-y-1/2 ${node.xOffset >= 0 ? 'right-full mr-8 text-right' : 'left-full ml-8 text-left'} w-64 transition-all duration-300 ${node.isActive ? 'opacity-100 translate-x-0' : 'opacity-0 group-hover:opacity-100 translate-x-4 pointer-events-none'}`}
-              >
-                <div className={`p-4 rounded-lg border-2 shadow-2xl backdrop-blur-sm ${
-                  node.isActive ? 'bg-[#2C1810]/95 border-gold text-parchment scale-110' : 'bg-[#E8D8B0]/95 border-[#2C1810]/30 text-[#2C1810]'
-                }`}>
-                  <div className={`text-xs font-bold uppercase tracking-widest mb-1 ${node.isActive ? 'text-gold' : 'text-[#4A0404]'}`}>
-                    Chapter {node.chapterNumber} • Lesson {node.id}
-                  </div>
-                  <div className={`text-lg leading-tight ${node.isLocked ? 'opacity-50' : 'opacity-100 font-bold'}`}>
-                    {node.title}
-                  </div>
-                  {node.isCompleted && (
-                    <div className="text-xs text-green-700/80 mt-2 font-bold uppercase tracking-wider flex items-center justify-end">
-                      <Check className="w-3 h-3 mr-1" /> Mastered
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Chapter Header spanning across */}
-              {node.id % 6 === 1 && (
-                 <motion.div 
-                   initial={{ opacity: 0, y: 20 }}
-                   whileInView={{ opacity: 1, y: 0 }}
-                   viewport={{ once: true, margin: "-100px" }}
-                   className={`absolute -top-24 whitespace-nowrap text-3xl font-fantasy flex items-center space-x-4`} 
-                   style={{ color: '#4A0404' }}
-                 >
-                   <span className="w-12 h-px bg-[#4A0404]/30" />
-                   <span className="tracking-widest bg-[#E8D8B0] px-4 py-1 border border-[#4A0404]/20 rounded-full shadow-sm">
-                     Chapter {node.chapterNumber}
-                   </span>
-                   <span className="w-12 h-px bg-[#4A0404]/30" />
-                 </motion.div>
+            </div>
+            
+            <div className="mt-3 pointer-events-none z-10">
+              {node.isLocked ? (
+                  <div className="w-1 h-1 rounded-full bg-gray-700" />
+              ) : node.isBoss ? (
+                  <Trophy className="w-5 h-5 text-[#D4AF37] drop-shadow-[0_0_5px_rgba(212,175,55,0.5)]" />
+              ) : node.isCompleted ? (
+                  <Shield className="w-5 h-5 text-emerald-500/80" />
+              ) : (
+                  <BookOpen className="w-5 h-5 text-[#D4AF37]/70" />
               )}
-            </motion.div>
-          );
-        })}
+            </div>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
