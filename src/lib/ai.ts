@@ -11,21 +11,28 @@ export async function callAI(messages: { role: 'system' | 'user' | 'assistant', 
     max_tokens: 1000
   };
 
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(requestBody)
-  });
+  try {
+    const res = await fetch('/nvidia-api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
 
-  if (!res.ok) {
-    throw new Error(`AI API error: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`AI API error: ${res.status} ${res.statusText} - ${errText}`);
+      throw new Error(`AI API error: ${res.status} ${res.statusText}`);
+    }
+
+    const json = await res.json();
+    return json.choices[0]?.message?.content || "Hedwig is asleep right now. Try again later.";
+  } catch (error) {
+    console.error("Hedwig Fetch Error:", error);
+    throw error;
   }
-
-  const json = await res.json();
-  return json.choices[0]?.message?.content || "Hedwig is asleep right now. Try again later.";
 }
 
 export async function explainMistake(code: string, errorOutput: string, quest: string): Promise<string> {
