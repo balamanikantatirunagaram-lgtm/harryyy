@@ -1,78 +1,88 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Scroll, Lock } from 'lucide-react';
-
+import { Check, Lock, Skull, Play } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
-import { generateLesson } from '../services/aiTutor';
+import { CURRICULUM } from '../data/curriculum';
 
 const AcademyMap: React.FC = () => {
   const navigate = useNavigate();
-  const { level, currentChapter, currentLesson, previousTopics, prefetchedLesson, setPrefetchedLesson } = usePlayerStore();
-  const [isPrefetching, setIsPrefetching] = useState(false);
+  const { currentLesson } = usePlayerStore();
 
-  useEffect(() => {
-    // If we don't have a lesson ready for the exact current state, fetch it in the background now!
-    if (!prefetchedLesson || prefetchedLesson.chapterNumber !== currentChapter) {
-      setIsPrefetching(true);
-      generateLesson(level, currentChapter, previousTopics, currentLesson)
-        .then(lesson => {
-          setPrefetchedLesson(lesson);
-          setIsPrefetching(false);
-        })
-        .catch(err => {
-          console.error("Initial prefetch failed:", err);
-          setIsPrefetching(false);
-        });
-    }
-  }, [level, currentChapter, currentLesson, previousTopics, prefetchedLesson, setPrefetchedLesson]);
+  const lessons = Object.entries(CURRICULUM).map(([key, val]) => ({
+    id: Number(key),
+    ...val
+  })).sort((a, b) => a.id - b.id);
 
   return (
-    <div className="min-h-full p-12 relative">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-12">
-          <h2 className="text-4xl font-fantasy text-gold mb-2 tracking-widest">Academy Grounds</h2>
-          <p className="text-parchment-dark text-lg">Select a location to continue your studies.</p>
-        </header>
+    <div className="min-h-full p-8 relative overflow-hidden bg-midnight">
+      <div className="max-w-4xl mx-auto text-center mb-16">
+        <h2 className="text-5xl font-fantasy text-gold mb-4 tracking-widest drop-shadow-lg">The Marauder's Path</h2>
+        <p className="text-parchment/80 text-xl font-sans">Trace your steps through the magical curriculum.</p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="flex flex-col items-center py-10 space-y-12 pb-32">
+        {lessons.map((lesson, index) => {
+          const isCompleted = lesson.id < currentLesson;
+          const isActive = lesson.id === currentLesson;
+          const isLocked = lesson.id > currentLesson;
+
+          // Create a serpentine winding path
+          const pattern = [0, 40, 80, 40, 0, -40, -80, -40];
+          const xOffset = pattern[index % pattern.length];
           
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className="panel-dark p-8 rounded-lg border-2 border-gold/50 hover:border-gold cursor-pointer transition-colors relative overflow-hidden group"
-            onClick={() => navigate(`/lesson/${currentLesson}`)}
-          >
-            <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="flex justify-between items-start mb-6">
-              <Scroll className="text-gold w-8 h-8" />
-              <span className="bg-emerald-900/50 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-500/30 uppercase tracking-widest">Active</span>
-            </div>
-            <h3 className="text-2xl font-fantasy text-parchment-light mb-2">Current Study</h3>
-            <p className="text-sm text-parchment/70 font-sans mb-4">Chapter {currentChapter} • Lesson {currentLesson}</p>
-            
-            <p className="text-xs text-gold-dark mt-4 border-t border-parchment/10 pt-4 flex items-center justify-between">
-              <span>Resume your arcane training</span>
-              {isPrefetching ? (
-                <span className="text-blue-400 animate-pulse">Scribing...</span>
-              ) : (
-                <span className="text-emerald-400">Ready</span>
+          return (
+            <motion.div
+              key={lesson.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="relative flex flex-col items-center group z-10"
+              style={{ transform: `translateX(${xOffset}px)` }}
+            >
+              {/* Connection Line to next node (except last) */}
+              {index < lessons.length - 1 && (
+                <div 
+                  className={`absolute w-2 h-20 -bottom-16 -z-10 ${isCompleted ? 'bg-gold' : 'bg-midnight-light'}`}
+                  style={{
+                    transform: `rotate(${pattern[(index + 1) % pattern.length] > xOffset ? '-20deg' : pattern[(index + 1) % pattern.length] < xOffset ? '20deg' : '0deg'})`,
+                    transformOrigin: 'top center'
+                  }}
+                />
               )}
-            </p>
-          </motion.div>
 
-          <motion.div 
-            className="panel-dark p-8 rounded-lg border border-parchment/10 opacity-75 relative overflow-hidden"
-          >
-            <div className="flex justify-between items-start mb-6">
-              <BookOpen className="text-parchment/30 w-8 h-8" />
-              <Lock className="text-parchment/30 w-5 h-5" />
-            </div>
-            <h3 className="text-2xl font-fantasy text-parchment/50 mb-2">Potions Laboratory</h3>
-            <p className="text-sm text-parchment/40 font-sans mb-4">Chapter 2 • Crossing the Threshold</p>
-            <p className="text-xs text-parchment/30 mt-4 border-t border-parchment/10 pt-4">Requires Chapter 1 completion</p>
-          </motion.div>
+              {/* Lesson Node */}
+              <div 
+                onClick={() => !isLocked && navigate(`/lesson/${lesson.id}`)}
+                className={`w-20 h-20 rounded-full flex items-center justify-center border-4 shadow-2xl transition-all duration-300 ${
+                  isLocked 
+                    ? 'bg-midnight-dark border-midnight-light cursor-not-allowed opacity-60' 
+                    : isActive
+                      ? 'bg-burgundy border-gold cursor-pointer scale-125 hover:scale-110 shadow-gold/50'
+                      : 'bg-emerald-900 border-emerald-400 cursor-pointer hover:scale-110 hover:border-white shadow-emerald-900/50'
+                }`}
+              >
+                {isLocked ? (
+                  <Lock className="w-8 h-8 text-parchment/30" />
+                ) : isActive ? (
+                  lesson.isBoss ? <Skull className="w-10 h-10 text-gold animate-pulse" /> : <Play className="w-10 h-10 text-gold ml-1" />
+                ) : (
+                  lesson.isBoss ? <Skull className="w-8 h-8 text-emerald-400" /> : <Check className="w-10 h-10 text-emerald-400" />
+                )}
+              </div>
 
-        </div>
+              {/* Tooltip / Label */}
+              <div className={`absolute top-1/2 -translate-y-1/2 ${xOffset >= 0 ? 'right-full mr-6 text-right' : 'left-full ml-6 text-left'} w-48 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}>
+                <div className={`text-xs font-bold uppercase tracking-widest mb-1 ${isLocked ? 'text-parchment/50' : 'text-gold'}`}>
+                  Lesson {lesson.id}
+                </div>
+                <div className={`text-sm font-sans ${isLocked ? 'text-parchment/30' : 'text-parchment'}`}>
+                  {lesson.title}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

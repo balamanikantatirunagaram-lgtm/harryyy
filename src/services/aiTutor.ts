@@ -6,6 +6,7 @@ export const LessonSchema = z.object({
   title: z.string(),
   story: z.string(),
   instruction: z.string(),
+  exampleCode: z.string().optional(),
   questDescription: z.string(),
   exampleInput: z.string().optional(),
   exampleOutput: z.string().optional(),

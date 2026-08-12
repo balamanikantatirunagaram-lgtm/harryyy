@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { runPythonCode, initPyodide } from '../services/pythonRunner';
 import { usePlayerStore } from '../store/playerStore';
@@ -7,6 +8,9 @@ import { Play, RotateCcw, ShieldAlert, CheckCircle2, Loader2, ArrowRight } from 
 import { motion } from 'framer-motion';
 
 const LessonView: React.FC = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
   const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +20,9 @@ const LessonView: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { level, currentChapter, currentLesson, previousTopics, prefetchedLesson, addXP, completeLesson, setPrefetchedLesson } = usePlayerStore();
+  const { level, currentChapter, currentLesson, previousTopics, prefetchedLesson, addXP, completeLesson } = usePlayerStore();
+
+  const targetLessonNumber = id ? parseInt(id, 10) : currentLesson;
 
   useEffect(() => {
     initPyodide().then(() => setIsPyodideReady(true));
@@ -24,54 +30,28 @@ const LessonView: React.FC = () => {
 
   useEffect(() => {
     const fetchLesson = async () => {
-      // Reset view state for new lesson
       setOutput('');
       setError(null);
       setIsSuccess(false);
 
-      // 1. If we already have the lesson prefetched for this chapter/state, use it!
-      if (prefetchedLesson && prefetchedLesson.chapterNumber === currentChapter && previousTopics.length > 0 && previousTopics[previousTopics.length - 1] !== prefetchedLesson.title) {
-        // Wait, prefetch condition is tricky. It's better to just trust it if it exists.
-        setLessonData(prefetchedLesson);
-        setCode(prefetchedLesson.starterCode || '# Write your incantation here\n');
-        setIsGenerating(false);
-        
-        // 2. Immediately start prefetching the NEXT lesson in the background
-        const nextTopics = [...previousTopics, prefetchedLesson.title];
-        try {
-          const nextLesson = await generateLesson(level, currentChapter, nextTopics, currentLesson + 1);
-          setPrefetchedLesson(nextLesson);
-        } catch (e) {
-          console.warn("Background prefetch failed:", e);
-        }
-        return;
+      if (prefetchedLesson && prefetchedLesson.title && previousTopics[previousTopics.length - 1] !== prefetchedLesson.title) {
+        // Wait, prefetch condition is tricky. It's better to just fetch directly since we use CURRICULUM now.
       }
 
-      // 3. Otherwise, we have to generate it now (blocking the user)
       setIsGenerating(true);
       try {
-        const data = await generateLesson(level, currentChapter, previousTopics, currentLesson);
+        const data = await generateLesson(level, currentChapter, previousTopics, targetLessonNumber);
         setLessonData(data);
         setCode(data.starterCode || '# Write your incantation here\n');
-        
-        // 4. Start prefetching the NEXT lesson in the background
-        const nextTopics = [...previousTopics, data.title];
-        generateLesson(level, currentChapter, nextTopics, currentLesson + 1)
-          .then(nextLesson => setPrefetchedLesson(nextLesson))
-          .catch(e => console.warn("Background prefetch failed:", e));
-
       } catch (err) {
         console.error(err);
-        // Fallback or handle error
       } finally {
         setIsGenerating(false);
       }
     };
     
-    // Only run if we don't have active lessonData yet or if we just moved to a new lesson
     fetchLesson();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, currentChapter, currentLesson, previousTopics]);
+  }, [level, currentChapter, previousTopics, targetLessonNumber]);
 
   const handleCastSpell = async () => {
     if (!isPyodideReady || !lessonData) return;
@@ -87,16 +67,20 @@ const LessonView: React.FC = () => {
 
     if (!result.error && result.output.includes(lessonData.expectedOutputSnippet)) {
       setIsSuccess(true);
-      addXP(lessonData.xpReward);
+      // Only give XP if they are beating it for the first time (prevent infinite grinding)
+      if (targetLessonNumber === currentLesson) {
+        addXP(lessonData.xpReward);
+      }
     }
   };
 
   const handleNextLesson = () => {
     if (lessonData) {
-      completeLesson(lessonData.title);
+      completeLesson(lessonData.title, targetLessonNumber);
       setIsSuccess(false);
       setOutput('');
       setCode('');
+      navigate(`/lesson/${targetLessonNumber + 1}`);
     }
   };
 
@@ -143,9 +127,15 @@ const LessonView: React.FC = () => {
           {lessonData.story}
         </div>
 
-        <div className="bg-midnight-light/10 p-4 rounded border-l-4 border-gold-dark mb-8">
-          <h4 className="font-bold text-burgundy-dark mb-2">Instruction</h4>
-          <p className="text-sm leading-relaxed">{lessonData.instruction}</p>
+        <div className="bg-midnight/50 p-4 rounded mb-6 border-l-4 border-gold">
+          <h4 className="font-bold text-gold mb-2 uppercase tracking-widest text-xs">Instruction</h4>
+          <p className="text-parchment-light/80 text-sm leading-relaxed mb-3">{lessonData.instruction}</p>
+          
+          {lessonData.exampleCode && (
+            <div className="bg-black/60 p-3 rounded text-xs font-mono text-emerald-400 border border-parchment/10 overflow-x-auto whitespace-pre">
+              {lessonData.exampleCode}
+            </div>
+          )}
         </div>
 
         <div className="bg-midnight-dark text-parchment-light p-4 rounded border border-gold-dark/50 mb-8 shadow-inner">

@@ -18,7 +18,7 @@ interface PlayerState {
   setName: (name: string) => void;
   setHouse: (house: House) => void;
   addXP: (amount: number) => void;
-  completeLesson: (topic: string) => void;
+  completeLesson: (topic: string, playedLessonNumber: number) => void;
   setPrefetchedLesson: (lesson: GeneratedLesson | null) => void;
   loadProfile: (username: string, data: any) => void;
   clearProfile: () => void;
@@ -71,8 +71,12 @@ export const usePlayerStore = create<PlayerState>()(
         syncToCloud(state.name, { xp: newXP, level: newLevel });
       },
       
-      completeLesson: (topic) => {
+      completeLesson: (topic, playedLessonNumber) => {
         const state = get();
+        if (playedLessonNumber !== state.currentLesson) {
+          return; // They are replaying an old level, don't advance the highest unlocked
+        }
+        
         const nextLesson = state.currentLesson + 1;
         const nextChapter = Math.floor((nextLesson - 1) / 6) + 1; 
         const newTopics = [...state.previousTopics, topic];
